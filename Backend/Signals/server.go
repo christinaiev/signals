@@ -14,6 +14,7 @@ import (
 	"github.com/labstack/echo/v5/middleware"
 )
 
+// struct for signals matching the original JSON file
 type Signal struct {
 	Id      int64   `json:"signal_id"`
 	Name    string  `json:"signal_name"`
@@ -21,6 +22,8 @@ type Signal struct {
 	Mileage float32 `json:"mileage"`
 }
 
+// struct for unique signals, as the original JSON file has duplicate signals with different mileage on tracks
+// this struct aggregates them in one entry with an array of mileages to be ready to use by the frontend ready parsed
 type UniqueSignal struct {
 	Id      int64     `json:"signal_id"`
 	Name    string    `json:"signal_name"`
@@ -28,6 +31,7 @@ type UniqueSignal struct {
 	Mileage []float32 `json:"mileage"`
 }
 
+// struct for tracks matching the original JSON file
 type Track struct {
 	Id      int64    `json:"track_id"`
 	Source  string   `json:"source"`
@@ -35,14 +39,15 @@ type Track struct {
 	Signals []Signal `json:"signal_ids"`
 }
 
+// array of tracks as read from the JSON file, it is used by the endpoints functions
 var tracks []Track
 
-//var tracks = map[int]*Track{}
-
+// The endpoint for GET /tracks/ without parameters, fetches all the track data without pagination
 func getAllTracks(c *echo.Context) error {
 	return c.JSON(http.StatusOK, tracks)
 }
 
+// The endpoint for GET /tracks/:id fetches the specified track data, including associated signals
 func getTrack(c *echo.Context) error {
 	id, _ := strconv.Atoi(c.Param("id"))
 	var foundIndex int = -1
@@ -50,22 +55,23 @@ func getTrack(c *echo.Context) error {
 		if tracks[index].Id == int64(id) {
 
 			foundIndex = index
-			fmt.Println("found track at ", index)
 			break
 		}
 	}
-
+	// no track found
 	if foundIndex == -1 {
-		return c.JSON(http.StatusOK, "")
+		return c.JSON(http.StatusNotFound, "Track ID not found")
 	}
 
+	// sort the tracks by track ID
 	sort.Slice(tracks[foundIndex].Signals[:], func(i, j int) bool {
 		return tracks[foundIndex].Signals[i].Id < tracks[foundIndex].Signals[j].Id
 	})
-	return c.JSON(http.StatusOK, tracks[foundIndex])
 
+	return c.JSON(http.StatusOK, tracks[foundIndex])
 }
 
+// unused endpoint to return a signal from a specific track
 func getSignal(c *echo.Context) error {
 	track_id, _ := strconv.Atoi(c.Param("track_id"))
 	signal_id, _ := strconv.Atoi(c.Param("signal_id"))
@@ -89,9 +95,11 @@ func getSignal(c *echo.Context) error {
 	return c.JSON(http.StatusOK, tracks[foundTrack].Signals[foundSignal])
 }
 
+// The endpoint for GET /signals/ without parameters, fetches all the signals without pagination
 func getAllSignals(c *echo.Context) error {
 	var Signals = map[int64]*UniqueSignal{}
 
+	// Iterate on all the tracks to store the UniqueSignals each with an array of mileages instead of duplicate signals that come from the original JSON
 	for indexTracks := range tracks {
 		for indexSignal := range tracks[indexTracks].Signals {
 
@@ -112,6 +120,7 @@ func getAllSignals(c *echo.Context) error {
 
 		}
 	}
+	// There is probably a more elegant way to do this, copying the map of signals into an array to return the JSON, I used this due to time.
 	result := make([]UniqueSignal, 0, len(Signals))
 	for _, signal := range Signals {
 		result = append(result, *signal)
@@ -123,6 +132,7 @@ func getAllSignals(c *echo.Context) error {
 	return c.JSON(http.StatusOK, result)
 }
 
+// enpoint to get all tracks associated with a signal, it is not used in the frontend yet
 func getSignalTracks(c *echo.Context) error {
 	signal_id, _ := strconv.Atoi(c.Param("id"))
 
@@ -145,6 +155,7 @@ func getSignalTracks(c *echo.Context) error {
 	return c.JSON(http.StatusOK, signalTracks)
 }
 
+// Load the orignal JSON file into tracks array
 func loadJSONFile(fileName string) {
 
 	jsonFile, err := os.Open(fileName)
@@ -162,6 +173,7 @@ func loadJSONFile(fileName string) {
 		return
 	}
 
+	// Replace the NaN in the original
 	var cleanedJson string = strings.Replace(string(byteValue), "NaN", "null", -1)
 
 	err = json.Unmarshal([]byte(cleanedJson), &tracks)
