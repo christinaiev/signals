@@ -4,8 +4,8 @@ import { getTracks } from './api'
 import { useState } from 'react'
 
 
-
-
+// Tracks component has the main functionality as it lists all the tracks and links to individual tracks for specific data
+// Tracks can be queried by ID, source and target
 
 export default function Tracks() {
   const { data, status, error } = useQuery({

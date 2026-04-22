@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { getSignals } from './api'
 
-
+// Signals component displays all the signals data (unique signals), no filtering due to lack of time.
 export default function Signals() {
   const { data, status, error } = useQuery({
     queryKey: ['tracks'],

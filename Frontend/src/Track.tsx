@@ -9,16 +9,14 @@ export default function Track() {
   const { data, status, error } = useQuery({
     queryKey: ['track', trackId],
     queryFn: () => getTrack(trackId),
+    enabled: !!trackId,
   })
 
-   if (!trackId) {
-    return <p>Invalid track ID</p>
-  }
+    if (!trackId) return <p>Invalid track ID</p>
 
+    if (status === 'pending') return <p>Loading...</p>
 
-  if (status === 'pending') return <p>Loading...</p>
-
-  if (status === 'error') return <p>Error :( {error?.message}</p>
+    if (status === 'error') return <p>Error :( {error?.message}</p>
     
   return (
     <div className="rounded-2xl shadow-md p-2 border border border-gray-100">
@@ -39,7 +37,7 @@ export default function Track() {
         </tr>
         </thead>
         <tbody className="divide-y divide-gray-100">
-      { data.signal_ids.map((signal) => (
+      { (data?.signal_ids ?? []).map((signal) => (
         <tr key={signal.signal_id}>
               <td className="px-4 py-3">{signal.signal_id}</td>
               <td className="px-4 py-3">{signal.signal_name} </td>
